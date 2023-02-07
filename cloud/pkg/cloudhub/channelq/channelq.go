@@ -73,6 +73,7 @@ func (q *ChannelMessageQueue) DispatchMessage() {
 			klog.Warning("node id is not found in the message")
 			continue
 		}
+		// 若为list中期待的消息，则转发
 		if isListResource(&msg) {
 			q.addListMessageToQueue(nodeID, &msg)
 		} else {

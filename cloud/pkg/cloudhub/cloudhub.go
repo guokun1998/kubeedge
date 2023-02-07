@@ -27,6 +27,7 @@ type cloudHub struct {
 	messageq             *channelq.ChannelMessageQueue
 }
 
+// 编译器检查接口是否实现
 var _ core.Module = (*cloudHub)(nil)
 
 func newCloudHub(enable bool) *cloudHub {

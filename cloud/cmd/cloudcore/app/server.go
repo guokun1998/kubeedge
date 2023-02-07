@@ -43,6 +43,7 @@ import (
 )
 
 func NewCloudCoreCommand() *cobra.Command {
+	// 新建options
 	opts := options.NewCloudCoreOptions()
 	cmd := &cobra.Command{
 		Use: "cloudcore",
@@ -52,34 +53,41 @@ caching and sending messages to EdgeHub. EdgeController is an extended kubernete
 edge nodes and pods metadata so that the data can be targeted to a specific edge node. DeviceController is an extended
 kubernetes controller which manages devices so that the device metadata/status date can be synced between edge and cloud.`,
 		Run: func(cmd *cobra.Command, args []string) {
+			// flag验证
 			verflag.PrintAndExitIfRequested()
 			flag.PrintMinConfigAndExitIfRequested(v1alpha1.NewMinCloudCoreConfig())
 			flag.PrintDefaultConfigAndExitIfRequested(v1alpha1.NewDefaultCloudCoreConfig())
 			flag.PrintFlags(cmd.Flags())
 
+			// 配置文件校验
 			if errs := opts.Validate(); len(errs) > 0 {
 				klog.Exit(util.SpliceErrors(errs))
 			}
 
+			// 结合默认配置和yaml配置生成配置
 			config, err := opts.Config()
 			if err != nil {
 				klog.Exit(err)
 			}
+			// 验证配置
 			if errs := validation.ValidateCloudCoreConfiguration(config); len(errs) > 0 {
 				klog.Exit(util.SpliceErrors(errs.ToAggregate().Errors()))
 			}
 
+			// 功能设置与验证？
 			if err := features.DefaultMutableFeatureGate.SetFromMap(config.FeatureGates); err != nil {
 				klog.Exit(err)
 			}
 
 			// To help debugging, immediately log version
 			klog.Infof("Version: %+v", version.Get())
+			// 依赖k8s生成client
 			client.InitKubeEdgeClient(config.KubeAPIConfig)
 
 			// Negotiate TunnelPort for multi cloudcore instances
 			waitTime := rand.Int31n(10)
 			time.Sleep(time.Duration(waitTime) * time.Second)
+			// 协商端口号
 			tunnelport, err := NegotiateTunnelPort()
 			if err != nil {
 				panic(err)
@@ -89,6 +97,7 @@ kubernetes controller which manages devices so that the device metadata/status d
 
 			gis := informers.GetInformersManager()
 
+			// 注册所有云端模块
 			registerModules(config)
 
 			ctx := beehiveContext.GetContext()
